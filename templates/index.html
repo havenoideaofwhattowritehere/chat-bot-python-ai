@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чат-бот</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .chat-container { max-width: 600px; margin: auto; }
+        .message { margin: 10px 0; }
+        .user { color: blue; }
+        .bot { color: green; }
+        .sentiment { color: orange; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Чат-бот</h1>
+        <div id="messages">
+            {% for message in messages %}
+                <div class="message {{ message.role }}">{{ message.role|capitalize }}: {{ message.content }}</div>
+            {% endfor %}
+        </div>
+        <form id="chatForm" method="POST" action="/ask">
+            <input type="text" name="user_input" placeholder="Ваша репліка" required>
+            <button type="submit">Надіслати</button>
+            <button type="button" onclick="resetChat()">Очистити чат</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById('chatForm').addEventListener('submit', async (event) => {
+            event.preventDefault(); // Зупиняємо стандартну поведінку форми
+
+            const userInput = event.target.user_input.value;
+
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ user_input: userInput }) // Надсилаємо запит на /ask
+            });
+
+            const messagesDiv = document.getElementById('messages');
+
+            if (response.ok) {
+                const data = await response.json(); // Отримуємо JSON-дані
+                data.messages.forEach(msg => {
+                    messagesDiv.innerHTML += <div class="message ${msg.role}">${msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}: ${msg.content}</div>;
+                });
+                event.target.reset(); // Очищаємо поле вводу
+            } else {
+                console.error('Помилка при запиті:', response.status);
+            }
+        });
+
+        // Функція для очищення чату
+        function resetChat() {
+            if (confirm("Ви впевнені, що хочете очистити чат?")) {
+                fetch('/reset', { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            document.getElementById('messages').innerHTML = ''; // Очищуємо повідомлення
+                        } else {
+                            console.error('Помилка при очищенні чату:', response.status);
+                        }
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
